@@ -688,6 +688,8 @@ function AdminAnnouncements() {
 // ADMIN - FACULTY SEATING
 function AdminFacultySeats() {
   const [seats, setSeats] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
 
   useEffect(() => {
     loadSeats();
@@ -699,6 +701,34 @@ function AdminFacultySeats() {
       setSeats(res.data.seats);
     } catch (err) {
       console.error('Error:', err);
+    }
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+
+    try {
+      const res = await facultySeatsAPI.import(file);
+      setImportResult({ success: true, ...res.data });
+      loadSeats();
+    } catch (err) {
+      setImportResult({ success: false, message: err.response?.data?.detail || 'Import failed' });
+    } finally {
+      setImporting(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await facultySeatsAPI.getTemplate();
+      downloadBlob(res.data, 'faculty_seats_template.xlsx');
+    } catch (err) {
+      alert('Template download failed');
     }
   };
 
@@ -716,21 +746,75 @@ function AdminFacultySeats() {
   return (
     <div className="content">
       <div className="card">
-        <div className="card-header"><div className="card-title">Faculty Seating Map</div></div>
+        <div className="card-header">
+          <div>
+            <div className="card-title">Faculty Seating Map</div>
+            <div className="card-sub">Import faculty details with seating information via Excel</div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button className="btn bg sm" onClick={handleDownloadTemplate}>
+              📥 Download Template
+            </button>
+            <label className="btn bp sm" style={{ cursor: 'pointer' }}>
+              📤 Import Excel
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleImport}
+                style={{ display: 'none' }}
+                disabled={importing}
+              />
+            </label>
+          </div>
+        </div>
         <div className="card-body">
+          {importing && <div className="success-msg">⏳ Importing faculty seats...</div>}
+          {importResult && (
+            <div className={importResult.success ? 'success-msg' : 'error-msg'} style={{ marginBottom: '16px' }}>
+              {importResult.message}
+              {importResult.success && (
+                <div style={{ marginTop: '8px', fontSize: '12px' }}>
+                  ✅ Added: {importResult.added} | 🔄 Updated: {importResult.updated}
+                  <br />Available Days: Monday to Friday | Available Time: 9:30 AM - 4:30 PM
+                </div>
+              )}
+            </div>
+          )}
+
           {Object.keys(floors).length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-3)' }}>No faculty seats configured.</div>
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-3)' }}>
+              No faculty seats configured. Import Excel file to add faculty seating details.
+            </div>
           ) : (
             Object.entries(floors).sort(([a], [b]) => b - a).map(([floor, floorSeats]) => (
               <div key={floor} style={{ marginBottom: '24px' }}>
                 <h4 style={{ marginBottom: '12px', color: 'var(--navy)' }}>Floor {floor}</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                   {floorSeats.map(seat => (
-                    <div key={seat.id} style={{ padding: '16px', background: seat.availability === 'available' ? 'var(--success-bg)' : seat.availability === 'occupied' ? 'var(--danger-bg)' : 'var(--blue-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div key={seat.id} style={{ 
+                      padding: '16px', 
+                      background: seat.availability === 'available' ? 'var(--success-bg)' : seat.availability === 'occupied' ? 'var(--danger-bg)' : 'var(--blue-bg)', 
+                      borderRadius: '12px', 
+                      border: '1px solid var(--border)' 
+                    }}>
                       <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>{seat.faculty_name}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '8px' }}>{seat.dept} • Room {seat.room_no}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>Status: {seat.availability}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{seat.office_hours}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '8px' }}>
+                        {seat.dept} • Room {seat.room_no}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: '4px' }}>
+                        Status: <strong>{seat.availability}</strong>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '2px' }}>
+                        📅 {seat.available_days || 'Monday to Friday'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '2px' }}>
+                        ⏰ {seat.office_hours || '9:30 AM - 4:30 PM'}
+                      </div>
+                      {seat.phone && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                          📞 {seat.phone}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1054,11 +1138,28 @@ function StudentFacultyMap() {
                 <h4 style={{ marginBottom: '12px', color: 'var(--navy)' }}>Floor {floor}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
                   {floorSeats.map(seat => (
-                    <div key={seat.id} style={{ padding: '16px', background: seat.availability === 'available' ? 'var(--success-bg)' : seat.availability === 'occupied' ? 'var(--danger-bg)' : 'var(--blue-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div key={seat.id} style={{ 
+                      padding: '16px', 
+                      background: seat.availability === 'available' ? 'var(--success-bg)' : seat.availability === 'occupied' ? 'var(--danger-bg)' : 'var(--blue-bg)', 
+                      borderRadius: '12px', 
+                      border: '1px solid var(--border)' 
+                    }}>
                       <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>{seat.faculty_name}</div>
                       <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '8px' }}>{seat.dept} • Room {seat.room_no}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-2)' }}>Status: <strong>{seat.availability}</strong></div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{seat.office_hours}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-2)', marginBottom: '4px' }}>
+                        Status: <strong>{seat.availability}</strong>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '2px' }}>
+                        📅 {seat.available_days || 'Monday to Friday'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-3)', marginBottom: '2px' }}>
+                        ⏰ {seat.office_hours || '9:30 AM - 4:30 PM'}
+                      </div>
+                      {seat.phone && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>
+                          📞 {seat.phone}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

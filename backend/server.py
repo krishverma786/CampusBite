@@ -1340,3 +1340,131 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# FACULTY SEATING IMPORT
+@api_router.post("/admin/faculty-seats/import")
+async def import_faculty_seats(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Import faculty seating from Excel"""
+    if current_user['role'] != 'admin':
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    db = get_database()
+    
+    # Read and parse file
+    content = await file.read()
+    try:
+        records = parse_csv_data(content)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    added = 0
+    updated = 0
+    errors = []
+    
+    for rec in records:
+        # Extract fields
+        name = rec.get('Name') or rec.get('name')
+        email = rec.get('Email') or rec.get('email') or rec.get('Email ID')
+        ecode = str(rec.get('ECode') or rec.get('ecode') or rec.get('Employee Code') or rec.get('E-Code') or '')
+        room = str(rec.get('Seating') or rec.get('seating') or rec.get('Room') or rec.get('room') or '')
+        mobile = str(rec.get('Mobile') or rec.get('mobile') or rec.get('Mobile Number') or rec.get('Phone') or '')
+        dept = rec.get('Department') or rec.get('department') or rec.get('Dept') or 'General'
+        
+        if not name or not email:
+            errors.append(f"Missing name or email in row")
+            continue
+        
+        email = email.lower().strip()
+        
+        # Check if faculty user exists
+        faculty_user = await db.users.find_one({"email": email, "role": "faculty"})
+        
+        if not faculty_user:
+            # Create faculty user if doesn't exist
+            faculty_user = {
+                "id": str(uuid.uuid4()),
+                "name": name.strip(),
+                "email": email,
+                "password_hash": get_password_hash("faculty@123"),
+                "role": "faculty",
+                "dept": dept,
+                "employee_code": ecode,
+                "room_no": room,
+                "mobile": mobile,
+                "is_active": True,
+                "must_change_password": True,
+                "created_at": datetime.utcnow()
+            }
+            await db.users.insert_one(faculty_user)
+        
+        # Extract floor from room number
+        floor = int(room[0]) if room and room[0].isdigit() else 5
+        
+        # Check if seat exists for this faculty
+        existing_seat = await db.faculty_seats.find_one({"faculty_id": faculty_user['id']})
+        
+        seat_data = {
+            "faculty_id": faculty_user['id'],
+            "building": "Academic Block",
+            "floor": floor,
+            "room_no": room,
+            "availability": "available",
+            "office_hours": "9:30 AM - 4:30 PM",
+            "available_days": "Monday to Friday",
+            "phone": mobile,
+            "dept": dept
+        }
+        
+        if existing_seat:
+            # Update existing
+            await db.faculty_seats.update_one(
+                {"faculty_id": faculty_user['id']},
+                {"$set": seat_data}
+            )
+            updated += 1
+        else:
+            # Create new
+            seat_data["id"] = str(uuid.uuid4())
+            await db.faculty_seats.insert_one(seat_data)
+            added += 1
+    
+    return {
+        "success": True,
+        "added": added,
+        "updated": updated,
+        "errors": errors[:10],
+        "message": f"{added} faculty seats added, {updated} updated successfully."
+    }
+
+@api_router.get("/admin/faculty-seats/template")
+async def download_faculty_seats_template():
+    """Download faculty seating template"""
+    import pandas as pd
+    import io
+    from fastapi.responses import StreamingResponse
+    
+    template_data = {
+        'Name': ['Dr. John Doe', 'Prof. Jane Smith'],
+        'Email': ['john.doe@cumail.in', 'jane.smith@cumail.in'],
+        'ECode': ['FAC001', 'FAC002'],
+        'Department': ['CS', 'Mathematics'],
+        'Seating': ['510', '611'],
+        'Mobile': ['9876543210', '9876543211']
+    }
+    
+    df = pd.DataFrame(template_data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Faculty Seats', index=False)
+    output.seek(0)
+    
+    headers = {
+        'Content-Disposition': 'attachment; filename="faculty_seats_template.xlsx"',
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }
+    
+    return StreamingResponse(output, headers=headers)
+
