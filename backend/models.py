@@ -175,6 +175,7 @@ class Event(BaseModel):
     date: date
     time: Optional[str] = None
     venue: Optional[str] = None
+    link: Optional[str] = None
     dept: str = "all"
     type: EventType
     posted_by: str
@@ -187,6 +188,7 @@ class EventCreate(BaseModel):
     date: date
     time: Optional[str] = None
     venue: Optional[str] = None
+    link: Optional[str] = None
     dept: str = "all"
     type: EventType
 

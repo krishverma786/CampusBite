@@ -486,11 +486,10 @@ function AdminSubjects() {
   );
 }
 
-// ADMIN - EVENTS MANAGEMENT
 function AdminEvents() {
   const [events, setEvents] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', time: '', venue: '', dept: 'all', type: 'academic' });
+  const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', time: '', venue: '', link: '', dept: 'all', type: 'academic' });
 
   useEffect(() => {
     loadEvents();
@@ -510,7 +509,7 @@ function AdminEvents() {
     try {
       await eventsAPI.create(newEvent);
       setShowAdd(false);
-      setNewEvent({ title: '', description: '', date: '', time: '', venue: '', dept: 'all', type: 'academic' });
+      setNewEvent({ title: '', description: '', date: '', time: '', venue: '', link: '', dept: 'all', type: 'academic' });
       loadEvents();
       alert('✅ Event created!');
     } catch (err) {
@@ -541,10 +540,17 @@ function AdminEvents() {
           ) : (
             events.map(event => (
               <div key={event.id} style={{ padding: '16px', marginBottom: '12px', background: 'var(--slate)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '4px' }}>{event.title}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-3)', marginBottom: '8px' }}>{event.description}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-2)' }}>📅 {event.date} • {event.time} • 📍 {event.venue}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-2)', marginBottom: '4px' }}>📅 {event.date} • {event.time} • 📍 {event.venue}</div>
+                  {event.link && (
+                    <div style={{ fontSize: '12px', marginTop: '8px' }}>
+                      <a href={event.link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: '500' }}>
+                        🔗 Event Link →
+                      </a>
+                    </div>
+                  )}
                 </div>
                 <button className="btn bd sm" onClick={() => handleDelete(event.id)}>Delete</button>
               </div>
@@ -563,6 +569,7 @@ function AdminEvents() {
               <div className="form-group"><label className="form-label">Date</label><input type="date" className="form-input" value={newEvent.date} onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })} required /></div>
               <div className="form-group"><label className="form-label">Time</label><input type="time" className="form-input" value={newEvent.time} onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })} /></div>
               <div className="form-group"><label className="form-label">Venue</label><input className="form-input" value={newEvent.venue} onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Event Link (Optional)</label><input type="url" className="form-input" value={newEvent.link} onChange={(e) => setNewEvent({ ...newEvent, link: e.target.value })} placeholder="https://example.com/event" /></div>
               <div className="form-group">
                 <label className="form-label">Department</label>
                 <select className="form-input" value={newEvent.dept} onChange={(e) => setNewEvent({ ...newEvent, dept: e.target.value })}>
@@ -1077,7 +1084,20 @@ function StudentEvents() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '4px' }}>{event.title}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '8px' }}>{event.description}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>📅 {event.date} • ⏰ {event.time} • 📍 {event.venue}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-3)', marginBottom: '4px' }}>📅 {event.date} • ⏰ {event.time} • 📍 {event.venue}</div>
+                  {event.link && (
+                    <div style={{ marginTop: '8px' }}>
+                      <a 
+                        href={event.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="btn bp sm"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        🔗 Event Link
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
