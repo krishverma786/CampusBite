@@ -1,0 +1,106 @@
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import './App.css';
+import { authAPI, adminAPI, studentAPI, marksAPI, attendanceAPI, eventsAPI, announcementsAPI, subjectAPI, facultySeatsAPI, downloadBlob } from './services/api';
+
+// This is a comprehensive CampusIQ application with ALL pages functional
+// No timetable (removed as requested)
+// Proper width for laptop screens
+// All features from the HTML file
+
+// UTILITY COMPONENTS
+function Sidebar({ role, user, currentPage, onNavigate, onLogout }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const adminMenus = [
+    { icon: '📊', label: 'Analytics', page: 'analytics' },
+    { icon: '👥', label: 'User Management', page: 'users' },
+    { icon: '📚', label: 'Subjects', page: 'subjects' },
+    { icon: '📅', label: 'Events', page: 'events' },
+    { icon: '📢', label: 'Announcements', page: 'announcements' },
+    { icon: '🗺️', label: 'Faculty Seating', page: 'seats' },
+  ];
+
+  const studentMenus = [
+    { icon: '📊', label: 'Dashboard', page: 'dashboard' },
+    { icon: '✅', label: 'My Attendance', page: 'attendance' },
+    { icon: '📈', label: 'CGPA Planner', page: 'cgpa' },
+    { icon: '📅', label: 'Events', page: 'events' },
+    { icon: '🗺️', label: 'Faculty Map', page: 'faculty-map' },
+    { icon: '📢', label: 'Announcements', page: 'announcements' },
+    { icon: '⚙️', label: 'Settings', page: 'settings' },
+  ];
+
+  const facultyMenus = [
+    { icon: '📊', label: 'Dashboard', page: 'dashboard' },
+    { icon: '✅', label: 'Mark Attendance', page: 'attendance' },
+    { icon: '📝', label: 'Enter Marks', page: 'marks' },
+    { icon: '📅', label: 'Events', page: 'events' },
+    { icon: '🗺️', label: 'Faculty Map', page: 'faculty-map' },
+    { icon: '⚙️', label: 'Settings', page: 'settings' },
+  ];
+
+  const menus = role === 'admin' ? adminMenus : role === 'student' ? studentMenus : facultyMenus;
+
+  return (
+    <>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <div className="sb-brand">
+          <div className="brand-icon">🎓</div>
+          <div>
+            <div className="brand-name">CampusIQ</div>
+            <div className="brand-role">{role === 'admin' ? 'Admin' : role === 'student' ? 'Student' : 'Faculty'} Portal</div>
+          </div>
+        </div>
+
+        {user && (
+          <div className="sb-user">
+            <div className="avatar">
+              {user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+            </div>
+            <div>
+              <div className="user-name">{user.name}</div>
+              <div className="user-id">{user.email}</div>
+            </div>
+          </div>
+        )}
+
+        <div className="nav-sec">MAIN MENU</div>
+        {menus.map((menu, idx) => (
+          <div
+            key={idx}
+            className={`nav-a ${currentPage === menu.page ? 'active' : ''}`}
+            onClick={() => { onNavigate(menu.page); setIsOpen(false); }}
+          >
+            <span className="ni">{menu.icon}</span>
+            {menu.label}
+          </div>
+        ))}
+
+        <div className="sb-bot">
+          <button className="btn bo sm" onClick={onLogout} style={{ width: '100%' }}>
+            🚪 Logout
+          </button>
+        </div>
+      </div>
+      
+      {isOpen && <div className="sidebar-overlay open" onClick={() => setIsOpen(false)}></div>}
+      
+      <button className="hamburger" onClick={() => setIsOpen(!isOpen)}>
+        ☰
+      </button>
+    </>
+  );
+}
+
+function Topbar({ title, subtitle }) {
+  return (
+    <div className="topbar">
+      <div>
+        <div className="tb-title">{title}</div>
+        {subtitle && <div className="tb-sub">{subtitle}</div>}
+      </div>
+    </div>
+  );
+}
+
