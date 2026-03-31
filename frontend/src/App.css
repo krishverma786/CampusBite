@@ -79,6 +79,25 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--slate);c
 .login-btn:hover{background:var(--blue-light)}
 .error-msg{background:var(--danger-bg);color:var(--danger);padding:10px;border-radius:8px;font-size:13px;margin-bottom:16px}
 .success-msg{background:var(--success-bg);color:var(--success);padding:10px;border-radius:8px;font-size:13px;margin-bottom:16px}
+/* Laptop/Desktop responsive */
+@media(max-width:1366px){
+ :root{--sidebar-w:240px}
+ .content{padding:20px}
+ .sum-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Tablet */
+@media(max-width:1024px){
+ :root{--sidebar-w:220px}
+ .sidebar{transform:translateX(-100%)}
+ .sidebar.open{transform:translateX(0)}
+ .sidebar-overlay.open{display:block}
+ .main{margin-left:0!important}
+ .hamburger{display:flex}
+ .sum-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Mobile */
 @media(max-width:768px){
  .sidebar{transform:translateX(-100%)}
  .sidebar.open{transform:translateX(0)}
@@ -91,6 +110,8 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--slate);c
  .tb-title{font-size:16px}
  .card-header,.ch{flex-direction:column;align-items:flex-start}
  .toast{bottom:14px;right:14px;left:14px;max-width:none}
+ .table-scroll{overflow-x:auto}
+ .dt{font-size:12px}
 }
 @media(max-width:480px){
  .sum-grid{grid-template-columns:1fr 1fr;gap:8px}
